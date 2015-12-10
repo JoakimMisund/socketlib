@@ -6,9 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-int init_socketlib(const uint8_t flags)
+int socketlib_init(const uint8_t flags)
 {
   options &= flags;
+}
+
+int socketlib_set_sendrecv_protocol(const uint8_t proto)
+{
+  sendrecv_proto = proto;
 }
 
 int socketlib_error(const char* str)
@@ -104,7 +109,79 @@ int connect_to_tcp_server(const char *node, const char *port)
   return create_server_client(node, port, SOCK_STREAM, IPPROTO_TCP, CLIENT);  
 }
 
-int Send(int sockfd, const void *buf, size_t len, int flags)
+ssize_t Send(int sockfd, const void *buf, size_t len, int flags)
 {
-  return socketlib_error("Error Send not implemented\n");
+  ssize_t sent = 0;
+  
+  if(sendrecv_proto & PROTO_LEN != 0) {
+    size_t len = htonl((uint32_t)len);
+    send(sockfd, &len, sizeof(size_t), flags);
+  } else if(sendrecv_proto & PROTO_ESCAPE != 0) {
+    socketlib_error("ESCAPE proto not implemented!\n");
+  }
+
+  int tries = 0;
+
+  while(sent < len) {
+    int ret_value = send(sockfd, buf + sent, len - sent, flags);
+
+    if(ret_value == -1)
+      return -1;
+
+    sent += ret_value;
+    
+    if(tries++ > MAX_NR_SEND_TRIES)
+      return -1;
+  }
+
+  if(sendrecv_proto & PROTO_ESCAPE != 0) {
+    socketlib_error("ESCAPE proto not implemented!\n");
+  }
+  
+  return sent;
+}
+
+
+ssize_t Recv(int sockfd, void *buf, size_t len, int flags)
+{
+  ssize_t recvd = 0;
+
+
+
+  if(sendrecv_proto & PROTO_LEN != 0) {
+
+    size_t msg_len = -1;
+    recv(sockfd, &msg_len, sizeof(size_t), flags);
+    msg_len = ntohl(msg_len);
+
+    if(len < msg_len) {
+      return -1;
+    }
+
+    int tries = 0;
+    do {
+      int ret_value = recv(sockfd, buf + recvd, msg_len - recvd, flags);
+
+      if(ret_value == -1)
+        return -1;
+
+      recvd += ret_value;
+
+      if(tries++ > MAX_NR_RECV_TRIES)
+        return -1;
+
+    } while(recvd < msg_len);
+
+  } else if(sendrecv_proto & PROTO_ESCAPE != 0) {
+
+    socketlib_error("ESCAPE proto not implemented!\n");
+
+  } else {
+  
+    recvd = recv(sockfd, buf, len, flags);
+  }
+  
+  
+
+  return recvd;
 }

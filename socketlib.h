@@ -12,9 +12,17 @@
 #define SERVER 0x01
 #define CLIENT 0x02
 
-uint8_t options;
+#define PROTO_LEN 0x01
+#define PROTO_ESCAPE 0x02
 
-int init_socketlib(const uint8_t flags);
+#define MAX_NR_SEND_TRIES 20
+#define MAX_NR_RECV_TRIES 20
+
+uint8_t options;
+uint8_t sendrecv_proto;
+
+int socketlib_init(const uint8_t flags);
+int socketlib_set_sendrecv_protocol(const uint8_t proto);
 
 int socketlib_error(const char* str);
 
@@ -24,4 +32,5 @@ int create_datagramtcp_server(const char *node, const char *port);
 
 int connect_to_tcp_server(const char *node, const char *port);
 
-int Send(int sockfd, const void *buf, size_t len, int flags);
+ssize_t Send(int sockfd, const void *buf, size_t len, int flags);
+ssize_t Recv(int sockfd, void *buf, size_t len, int flags);
