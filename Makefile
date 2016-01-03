@@ -1,12 +1,15 @@
 CC = gcc
 CCFLAGS = -c -g -Wall -Wextra
-LD = gcc
-LDFLAGS = 
+LC = gcc
+LCFLAGS = -o
 
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
 
-all: $(OBJECTS)
+all: $(OBJECTS) test
+
+test: test.o socketlib.o
+	$(LC) $(LCFLAGS) test test.o socketlib.o
 
 %.o: %.c
 	$(CC) $(CCFLAGS) $< -o $@
