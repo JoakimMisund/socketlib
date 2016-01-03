@@ -14,6 +14,64 @@ int socketlib_error(const char* str)
   exit(errno);
 }
 
+char* socket_atop(int sock, char* buf, uint16_t buf_size)
+{
+  struct sockaddr_storage saddr;
+  socklen_t saddrlen;
+  static char sbuf[ADDR_STRING_LEN];
+  char port_str[8];
+  char *buf_to_use;
+  int ret;
+
+  if(buf != NULL && buf_size < ADDR_STRING_LEN) {
+    socketlib_error("Provided buf to socket_atop is to small!");
+  }
+
+  //Decide on which buffer to put the put the result in.
+  buf_to_use = (buf == NULL) ? sbuf:buf;
+
+  //Find the address of the socket by calling getsockname
+  saddrlen = sizeof(struct sockaddr_storage);
+  if( (ret = getsockname(sock, (SA*) &saddr, &saddrlen)) == -1 ) {
+    //error
+    socketlib_error("Error in the call to getsockname");
+  }
+
+  //Based on the type in the sockaddr struct use the appropriate way to extract the rep
+
+  switch(saddr.ss_family) {
+  case AF_INET: {
+    struct sockaddr_in *addr = (struct sockaddr_in*)&saddr;
+    if(inet_ntop(AF_INET, &addr->sin_addr, buf_to_use, ADDR_STRING_LEN) == NULL)
+      socketlib_error("Call to inet_ntop failed");
+    
+    uint16_t port = ntohs(addr->sin_port);
+    if(snprintf(port_str, 8, ":%d", port) < 0) {
+      socketlib_error("Call to snprintf failed");
+    }
+
+    strncat(buf_to_use, port_str, ADDR_STRING_LEN);
+    break;
+  }
+
+  case AF_INET6: {
+    struct sockaddr_in6 *addr = (struct sockaddr_in6*)&saddr;
+    if(inet_ntop(AF_INET6, &addr->sin6_addr, buf_to_use, ADDR_STRING_LEN) == NULL)
+      socketlib_error("Call to inet_ntop failed");
+
+    uint16_t port = ntohs(addr->sin6_port);
+    if(snprintf(port_str, 8, ":%d", port) < 0) {
+      socketlib_error("Call to snprintf failed");
+    }   
+
+    strncat(buf_to_use, port_str, ADDR_STRING_LEN);
+    break;
+  }
+  }
+
+  //return a pointer to the buf
+  return buf_to_use;
+}
 
 int create_server_client(const char *node, const char *port,
                          int st, int p, uint8_t type)
