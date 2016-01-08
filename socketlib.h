@@ -23,6 +23,7 @@ int create_datagramtcp_server(const char *node, const char *port);
 int create_unix_server(const char* path_name);
 
 int connect_to_tcp_server(const char *node, const char *port);
+int connect_to_unix_server(const char* path_name);
 
 /*Returns a string rep of the address associated with the provided socket.
   If the buf perameter is not equal to zero the rep is put there.

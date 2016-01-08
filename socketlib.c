@@ -97,6 +97,8 @@ int create_unix_server(const char* path_name)
   unlink(addr.sun_path);
  
   sock = socket( AF_UNIX, SOCK_STREAM, 0 );
+  if( sock < 0 )
+    socketlib_error("Error in call to socket");
 
   if( bind( sock, (SA*)&addr, SUN_LEN(&addr)) != 0 )
     socketlib_error("Error in call to bind");
@@ -107,6 +109,34 @@ int create_unix_server(const char* path_name)
   }
 
   return sock;
+}
+
+int connect_to_unix_server(const char* path_name)
+{
+  struct sockaddr_un addr;
+  int sock; /*The returned socket fd*/
+  int ret_value; /*Used to store return values from function calls*/
+
+  /*clearing all variables*/
+  bzero( &addr, sizeof(addr));
+  sock = -1;
+  ret_value = 0;
+ 
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, path_name, UNIX_PATH_MAX);
+ 
+  sock = socket( AF_UNIX, SOCK_STREAM, 0 );
+  if( sock < 0 )
+    socketlib_error("Error in call to socket");
+
+  fprintf(stderr, "%s",path_name);
+  ret_value = connect(sock, (SA*)&addr,SUN_LEN(&addr));
+  if( ret_value < 0 ) {
+    return socketlib_error("Error in the call to connect");
+  }
+
+  return sock;
+  
 }
 
 int create_server_client(const char *node, const char *port,
