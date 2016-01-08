@@ -1,6 +1,7 @@
 #include "socketlib.h"
 
 #include <stdio.h>
+#include <unistd.h>
 #include <errno.h>
 #include <error.h>
 #include <stdlib.h>
@@ -33,13 +34,12 @@ char* socket_atop(int sock, char* buf, uint16_t buf_size)
   //Find the address of the socket by calling getsockname
   saddrlen = sizeof(struct sockaddr_storage);
   if( (ret = getsockname(sock, (SA*) &saddr, &saddrlen)) == -1 ) {
-    //error
     socketlib_error("Error in the call to getsockname");
   }
 
   //Based on the type in the sockaddr struct use the appropriate way to extract the rep
-
   switch(saddr.ss_family) {
+
   case AF_INET: {
     struct sockaddr_in *addr = (struct sockaddr_in*)&saddr;
     if(inet_ntop(AF_INET, &addr->sin_addr, buf_to_use, ADDR_STRING_LEN) == NULL)
@@ -67,10 +67,46 @@ char* socket_atop(int sock, char* buf, uint16_t buf_size)
     strncat(buf_to_use, port_str, ADDR_STRING_LEN);
     break;
   }
+    
+  case AF_LOCAL: {
+    struct sockaddr_un *addr = (struct sockaddr_un*)&saddr;
+    strncat(buf_to_use, addr->sun_path, ADDR_STRING_LEN);
+    strncat(buf_to_use, port_str, ADDR_STRING_LEN);
+    break;
+  }
   }
 
   //return a pointer to the buf
   return buf_to_use;
+}
+
+int create_unix_server(const char* path_name)
+{
+
+  struct sockaddr_un addr;
+  int sock; /*The returned socket fd*/
+  int ret_value; /*Used to store return values from function calls*/
+
+  /*clearing all variables*/
+  bzero( &addr, sizeof(addr));
+  sock = -1;
+  ret_value = 0;
+ 
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, path_name, UNIX_PATH_MAX);
+  unlink(addr.sun_path);
+ 
+  sock = socket( AF_UNIX, SOCK_STREAM, 0 );
+
+  if( bind( sock, (SA*)&addr, SUN_LEN(&addr)) != 0 )
+    socketlib_error("Error in call to bind");
+
+  ret_value = listen( sock, 10 );
+  if( ret_value < 0 ) {
+    return socketlib_error("Error in the call to listen");
+  }
+
+  return sock;
 }
 
 int create_server_client(const char *node, const char *port,

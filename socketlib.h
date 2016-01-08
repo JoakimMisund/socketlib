@@ -2,6 +2,7 @@
 #define SOCKETLIB_H
 
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 #include <inttypes.h>
 #include <netdb.h>
@@ -11,12 +12,15 @@
 #define CLIENT 2
 
 #define ADDR_STRING_LEN 128
+#define UNIX_PATH_MAX 108
 
 #define SA struct sockaddr
 
 int create_tcp_server(const char *node, const char *port);
 int create_udp_server(const char *node, const char *port);
 int create_datagramtcp_server(const char *node, const char *port);
+
+int create_unix_server(const char* path_name);
 
 int connect_to_tcp_server(const char *node, const char *port);
 

@@ -12,7 +12,7 @@ test: test.o socketlib.o
 	$(LC) $(LCFLAGS) test test.o socketlib.o
 
 %.o: %.c
-	$(CC) $(CCFLAGS) $< -o $@
+	$(CC) $(CCFLAGS) $<
 
 .PHONY: clean
 
