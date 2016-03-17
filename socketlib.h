@@ -7,6 +7,10 @@
 #include <inttypes.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <sys/time.h>
 
 #define SERVER 1
 #define CLIENT 2
@@ -24,6 +28,8 @@ int create_unix_server(const char* path_name);
 
 int connect_to_tcp_server(const char *node, const char *port);
 int connect_to_unix_server(const char* path_name);
+
+int send_ping(char* dst, char* src);
 
 /*Returns a string rep of the address associated with the provided socket.
   If the buf perameter is not equal to zero the rep is put there.

