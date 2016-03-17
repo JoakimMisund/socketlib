@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include "headers.h"
 
 void test_unix_sock();
 
