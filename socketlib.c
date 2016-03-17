@@ -287,7 +287,7 @@ int send_ping(char* dst, char* src)
   ip->tot_len = htons(packet_size);
   ip->id = rand();
   ip->frag_off = 0;
-  ip->ttl = 15
+  ip->ttl = 15;
   ip->protocol = IPPROTO_ICMP;
   ip->saddr = src_addr;
   ip->daddr = dst_addr;
@@ -308,7 +308,7 @@ int send_ping(char* dst, char* src)
   printf("Sending ping to %s\n", inet_ntoa(servaddr.sin_addr));
 
   int i = 0;
-  while(i < 100000000) {
+  while(i++ < 1) {
     int sent;
     if( (sent = sendto(sockfd, packet, packet_size, 0, (struct sockaddr*)&servaddr, sizeof(servaddr))) <= 0) 
     {
