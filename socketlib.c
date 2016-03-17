@@ -248,14 +248,17 @@ unsigned short in_cksum(unsigned short *ptr, int nbytes)
 
 int send_ping(char* dst, char* src)
 {
-  uint32_t dst_addr = inet_addr(dst);
-  uint32_t src_addr = inet_addr(src);
+  uint32_t dst_addr;
+  uint32_t src_addr;
   int sockfd;
   int enable = 1;
   int packet_size;
   char *packet;
   struct sockaddr_in servaddr;
-  
+
+  inet_pton(AF_INET,dst, &dst_addr);  
+  inet_pton(AF_INET,src, &src_addr);
+
   if ((sockfd = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
     {
       perror("Could not create raw socket");
