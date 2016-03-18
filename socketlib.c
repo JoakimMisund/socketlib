@@ -402,3 +402,70 @@ int create_raw_ip_socket()
 
 	return sock;
 }
+
+
+
+
+void print_icmp_message(struct iphdr *ip_hdr)
+{
+
+	struct icmphdr *icmp = (struct icmphdr*) ((char*)ip_hdr + sizeof(struct iphdr));
+	char buf[15];
+	size_t msg_len = ntohs(ip_hdr->tot_len) - sizeof(struct iphdr) - sizeof(struct icmphdr);
+
+	if(ip_hdr->protocol != IPPROTO_ICMP) {
+		fprintf(stderr, "Called print_icmp_message with non icmp ip packet!\n");
+		return;
+	}
+
+	printf("\n-----ICMP PACKET-----\n");
+	printf("Type: %d, Code %d, Checksum: 0x%x\n", icmp->type, icmp->code, icmp->checksum);
+
+	switch(icmp->type) {
+	case 0:
+		printf("Sequence number: %d, ID: %d\n", icmp->un.echo.sequence, icmp->un.echo.id);
+
+		break;
+	case 3:
+	case 4: break;
+	case 5:
+		inet_ntop(AF_INET, &icmp->un.gateway, buf, 15);
+		printf("Gateway %s\n", buf);
+		break;
+	case 8:
+		printf("Sequence number: %d, ID: %d\n", icmp->un.echo.sequence, icmp->un.echo.id);
+		break;
+
+	case 11:
+		break;
+	case 12:
+		printf("Pointer %d\n", icmp->un.echo.id);
+		break;
+		/*	case 13: TODO
+		network_byte_order = htonl(data->orig_timestamp);
+
+
+	case 14:
+		icmp->un.echo.sequence = data->sequence_num;
+		icmp->un.echo.id = data->id;
+		break;*/
+
+	}
+
+	if(msg_len > 0) {
+		printf("MSG: %s\n", (char*)ip_hdr + sizeof(struct iphdr) + sizeof(struct icmphdr));
+	}
+
+	/*
+ 	ip->version = 4;
+ 	ip->ihl = 5;
+ 	ip->tos = 0;
+ 	ip->tot_len = htons(packet_size);
+ 	ip->id = rand();
+ 	ip->frag_off = 0;
+	ip->ttl = 15;
+	ip->protocol = IPPROTO_ICMP;
+	ip->saddr = src_addr;
+ 	ip->daddr = dst_addr;
+	*/
+}

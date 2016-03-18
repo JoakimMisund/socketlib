@@ -48,7 +48,8 @@ int main(void)
 
 	char ip_buf[15];
 	printf("Received a message from ip: %s", inet_ntop(AF_INET, &sender_addr.sin_addr, ip_buf, 15));
-	printf("Icmp id: %d\n", ((struct icmphdr*)(buf+sizeof(struct iphdr)))->un.echo.id);
+
+	print_icmp_message((struct iphdr*) buf);
 
 	close(raw_sock);
 	close(icmp_sock);

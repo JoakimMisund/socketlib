@@ -53,6 +53,8 @@ int create_icmp_header(uint8_t type, uint8_t code, struct icmpdata *data, char *
 int create_raw_ip_socket();
 int create_icmp_socket();
 
+void print_icmp_message(struct iphdr *ip_hdr);
+
 
 
 /*Returns a string rep of the address associated with the provided socket.
