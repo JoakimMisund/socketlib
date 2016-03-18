@@ -5,6 +5,9 @@
 
 void test_unix_sock();
 
+#define BUF_SIZE 100
+#define SERV_ADDR "192.168.1.1"
+
 int main(void)
 {
   /*int sockfd = create_tcp_server("localhost","5000");
@@ -18,9 +21,38 @@ int main(void)
 
   test_unix_sock();
   */
-  send_ping("192.168.1.1", "192.168.1.6");
-  //close(sockfd);
-  return 0;
+
+
+	int raw_sock = create_raw_ip_socket();
+	int icmp_sock = create_icmp_socket();
+	int recvd;
+	char buf[BUF_SIZE];
+	struct sockaddr_in sender_addr = {0};
+	socklen_t addr_len = sizeof(struct sockaddr_in);
+
+	if (raw_sock == -1 || icmp_sock == -1)
+		return 1;
+
+
+	fprintf(stderr,"Sending echo to %s\n", SERV_ADDR);
+	if (0 != send_echo_msg(raw_sock, SERV_ADDR, "192.168.1.6", 67)) {
+		fprintf(stderr,"error in send_echo\n");
+	}
+
+
+	fprintf(stderr,"Waiting for echo response\n");
+	if ((recvd = recvfrom(icmp_sock, buf, BUF_SIZE, 0, (SA*)&sender_addr, &addr_len)) <= 0) {
+		perror("error recvfrom");
+		return 2;
+	}
+
+	char ip_buf[15];
+	printf("Received a message from ip: %s", inet_ntop(AF_INET, &sender_addr.sin_addr, ip_buf, 15));
+	printf("Icmp id: %d\n", ((struct icmphdr*)(buf+sizeof(struct iphdr)))->un.echo.id);
+
+	close(raw_sock);
+	close(icmp_sock);
+	return 0;
 }
 
 

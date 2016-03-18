@@ -277,6 +277,7 @@ int create_icmp_header(uint8_t type, uint8_t code, struct icmpdata *data, char *
 	if(total_req_size > buf_size)
 		return ERROR_BUFFER_TOO_SMALL;
 
+
 	struct icmphdr *icmp = (struct icmphdr*) buf;
 	char *data_ptr = buf + sizeof(struct icmphdr);
 
@@ -287,6 +288,7 @@ int create_icmp_header(uint8_t type, uint8_t code, struct icmpdata *data, char *
 	case 0:
 		icmp->un.echo.sequence = data->sequence_num;
 		icmp->un.echo.id = data->id;
+
 		break;
 	case 3:
 	case 4: break;
@@ -313,101 +315,90 @@ int create_icmp_header(uint8_t type, uint8_t code, struct icmpdata *data, char *
 		break;*/
 
 	}
-	icmp->checksum = in_cksum((unsigned short *)icmp, sizeof(struct icmphdr));
+
 	if(data->content != NULL)
 		memcpy(data_ptr, data->content, data->content_size);
 
-	return 0;
+	icmp->checksum = in_cksum((unsigned short *)icmp, sizeof(struct icmphdr));
+
+	return total_req_size;
 }
 
-int send_ping(char* dst, char* src)
+int send_echo_msg(int sock, char* dst, char* src, uint16_t id)
 {
-	uint32_t dst_addr = inet_addr(dst);
-	uint32_t src_addr = inet_addr(src);
-	int sockfd;
-	int enable = 1;
-	int packet_size;
-	char *packet;
-	struct sockaddr_in servaddr;
+	uint32_t dst_addr;
+ 	uint32_t src_addr;
+ 	int enable = 1;
+ 	int packet_size;
+ 	char *packet;
+ 	struct sockaddr_in servaddr;
 
-	if ((sockfd = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
-		{
-			perror("Could not create raw socket");
-			return EAGAIN;
-		}
+	inet_pton(AF_INET, dst, &dst_addr);
+	inet_pton(AF_INET, src, &src_addr);
 
-	if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (const char*)&enable, sizeof(enable)) == -1)
-		{
-			perror("setsockopt failed");
-			return EACCES;
-		}
-
-
-	packet_size = sizeof(struct iphdr) + sizeof(struct icmphdr);
-	packet = calloc(1,packet_size);
-	if(!packet) {
-		perror("Malloc");
-		close(sockfd);
-		return EAGAIN;
+ 	if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, (const char*)&enable, sizeof(enable)) == -1) {
+		perror("setsockopt failed");
+		return EACCES;
 	}
 
-	/*Construct ip and icmp headers*/
-	struct iphdr *ip = (struct iphdr*) packet;
 
-	ip->version = 4;
-	ip->ihl = 5;
-	ip->tos = 0;
-	ip->tot_len = htons(packet_size);
-	ip->id = rand();
-	ip->frag_off = 0;
+ 	packet_size = sizeof(struct iphdr) + sizeof(struct icmphdr);
+ 	packet = calloc(1,packet_size);
+ 	if(!packet) {
+ 		perror("Malloc");
+		return EAGAIN;
+ 	}
+
+ 	/*Construct ip and icmp headers*/
+ 	struct iphdr *ip = (struct iphdr*) packet;
+ 	ip->version = 4;
+ 	ip->ihl = 5;
+ 	ip->tos = 0;
+ 	ip->tot_len = htons(packet_size);
+ 	ip->id = rand();
+ 	ip->frag_off = 0;
 	ip->ttl = 15;
 	ip->protocol = IPPROTO_ICMP;
 	ip->saddr = src_addr;
-	ip->daddr = dst_addr;
+ 	ip->daddr = dst_addr;
 
-	//Create the icmp packet.
 	struct icmpdata data = {0};
 	data.sequence_num = rand();
-	data.id = rand();
-	if(create_icmp_header(ICMP_ECHO, 0, &data, packet+sizeof(struct iphdr), packet_size-sizeof(struct iphdr)) != 0) {
-		return -1;
-	}
+ 	data.id = id;
+ 	if(create_icmp_header(ICMP_ECHO, 0, &data, packet+sizeof(struct iphdr), packet_size-sizeof(struct iphdr)) <= 0) {
+ 		return -1;
+ 	}
 
-
-
-
-	memset(&servaddr, 0, sizeof(struct sockaddr_in));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = dst_addr;
 
-	printf("Sending ping to %s\n", inet_ntoa(servaddr.sin_addr));
-
-	int recv_s;
-	if ((recv_s = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
-		{
-			perror("Could not create raw socket");
-			return EAGAIN;
-		}
+	if(sendto(sock, packet, packet_size, 0, (struct sockaddr*)&servaddr, sizeof(servaddr)) <= 0)  {
+		perror("Failed sendto\n");
+		return -1;
+	}
+	return 0;
+}
 
 
-	int i = 0;
-	while(i++ < 1) {
-		int sent;
-		if( (sent = sendto(sockfd, packet, packet_size, 0, (struct sockaddr*)&servaddr, sizeof(servaddr))) <= 0)
-			{
-				perror("Failed sendto\n");
-				return 0;
-			}
-		char buf[1000] = {0};
-		socklen_t addrlen = sizeof(servaddr);
-		int d;
-		if((d=recvfrom(recv_s, buf, 1000, 0, (struct sockaddr*)&servaddr, &addrlen)) < 0)
-			perror("recv");
-		else {
-			struct icmphdr *icmp_hdr = (struct icmphdr*) (buf+sizeof(struct iphdr));
-			printf("type: %d\n", icmp_hdr->un.echo.id);
-		}
+int create_icmp_socket()
+{
+	int sock;
+
+	if ((sock = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
+		perror("Could not create raw socket");
+		return -1;
 	}
 
-	printf("Attack done");
+	return sock;
+}
+
+int create_raw_ip_socket()
+{
+	int sock;
+	if ((sock = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+		perror("Could not create raw socket");
+		return -1;
+	}
+
+	return sock;
 }
