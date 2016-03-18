@@ -20,8 +20,8 @@
 
 #define SA struct sockaddr
 
-#define ERROR_MISSING_PARAMETER 1
-#define ERROR_BUFFER_TOO_SMALL 2
+#define ERROR_MISSING_PARAMETER -1
+#define ERROR_BUFFER_TOO_SMALL -2
 
 struct icmpdata {
 	char* content;
@@ -47,8 +47,13 @@ int create_unix_server(const char* path_name);
 int connect_to_tcp_server(const char *node, const char *port);
 int connect_to_unix_server(const char* path_name);
 
-int send_ping(char* dst, char* src);
+int send_echo_msg(int sock, char* dst, char* src, uint16_t id);
 int create_icmp_header(uint8_t type, uint8_t code, struct icmpdata *data, char *buf, size_t buf_size);
+
+int create_raw_ip_socket();
+int create_icmp_socket();
+
+
 
 /*Returns a string rep of the address associated with the provided socket.
   If the buf perameter is not equal to zero the rep is put there.
