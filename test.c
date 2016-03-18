@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "headers.h"
+#include "packet.h"
 
 void test_unix_sock();
 
 int main(void)
 {
-  int sockfd = create_tcp_server("localhost","5000");
+  /*int sockfd = create_tcp_server("localhost","5000");
 
   char buf[ADDR_STRING_LEN];
   
@@ -18,8 +19,9 @@ int main(void)
   bzero(buf,ADDR_STRING_LEN);
 
   test_unix_sock();
-  
-  close(sockfd);
+  */
+  send_ping("192.168.1.1", "192.168.1.6");
+  //close(sockfd);
   return 0;
 }
 
