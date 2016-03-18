@@ -8,8 +8,8 @@ OBJECTS = $(SOURCES:.c=.o)
 
 all: $(OBJECTS) test
 
-test: test.o socketlib.o packet.o
-	$(LC) $(LCFLAGS) test test.o socketlib.o packet.o
+test: test.o socketlib.o
+	$(LC) $(LCFLAGS) test test.o socketlib.o
 
 %.o: %.c
 	$(CC) $(CCFLAGS) $<
